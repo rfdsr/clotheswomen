@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: linn-postgres
+    environment:
+      POSTGRES_USER: linnuser
+      POSTGRES_PASSWORD: linnpassword
+      POSTGRES_DB: linnstore
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U linnuser -d linnstore']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: linn-app
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: postgresql://linnuser:linnpassword@postgres:5432/linnstore
+      NEXTAUTH_SECRET: changeme-in-production
+      NEXTAUTH_URL: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+volumes:
+  postgres_data:
